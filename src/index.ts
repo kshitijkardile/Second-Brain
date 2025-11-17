@@ -2,7 +2,8 @@ import express from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import { z } from "zod";
-import { UserModel } from "./db.js";
+import { ContentModel, UserModel } from "./db.js";
+import { userMiddleware } from "./middleware.js";
 
 const saltOrRounds = 10;
 
@@ -54,7 +55,7 @@ app.post("/api/v1/signin", async (req, res) => {
     const ACCESS_SECRET = process.env.JWT_SECRET || "dev_access_secret";
     const REFRESH_SECRET = process.env.REFRESH_SECRET || "dev_refresh_secret";
 
-    const accessToken = jwt.sign(payload, ACCESS_SECRET, { expiresIn: "15m" });
+    const accessToken = jwt.sign(payload, ACCESS_SECRET, { expiresIn: "1d" });
     const refreshToken = jwt.sign(payload, REFRESH_SECRET, { expiresIn: "7d" });
 
     // Set refresh token in httpOnly cookie
@@ -77,7 +78,38 @@ app.post("/api/v1/signin", async (req, res) => {
   }
 });
 
-app.get("/pi/v1/content", async (req, res) => {});
+app.post("/api/v1/content", userMiddleware, async (req, res) => {
+  try {
+    const { title, link, type } = req.body;
+
+    if (!title || !link) {
+      return res.status(400).json({ error: "title and link are required" });
+    }
+
+    await ContentModel.create({
+      title,
+      link,
+      type: type || "link",
+      userId: req.userId,
+      tags: [],
+    });
+
+    return res.status(201).json({
+      message: "Content added",
+    });
+  } catch (err) {
+    console.error("Create content error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
+
+app.get("/api/v1/content", userMiddleware, async (req, res) => {
+  const userId = req.userId;
+  const content = await ContentModel.find({ userId: userId });
+  res.json({
+    content,
+  });
+});
 
 app.delete("/api/v1/content", async (req, res) => {});
 
