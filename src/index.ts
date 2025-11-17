@@ -105,13 +105,46 @@ app.post("/api/v1/content", userMiddleware, async (req, res) => {
 
 app.get("/api/v1/content", userMiddleware, async (req, res) => {
   const userId = req.userId;
-  const content = await ContentModel.find({ userId: userId });
+  const content = await ContentModel.find({ userId: userId }).populate(
+    "userId",
+    "Username"
+  );
   res.json({
     content,
   });
 });
 
-app.delete("/api/v1/content", async (req, res) => {});
+app.delete("/api/v1/content", userMiddleware, async (req, res) => {
+  try {
+    const id = req.body.id || req.query.id;
+    if (!id) {
+      return res.status(400).json({ error: "content id is required" });
+    }
+
+    // try to delete only if the authenticated user is the owner
+    const deleted = await ContentModel.findOneAndDelete({
+      _id: id,
+      userId: req.userId,
+    });
+
+    if (deleted) {
+      return res.status(200).json({ message: "Content deleted" });
+    }
+
+    // If nothing was deleted, check if the content exists to decide 403 vs 404
+    const existing = await ContentModel.findById(id);
+    if (existing) {
+      return res
+        .status(403)
+        .json({ error: "Not authorized to delete this content" });
+    } else {
+      return res.status(404).json({ error: "Content not found" });
+    }
+  } catch (err) {
+    console.error("Delete content error:", err);
+    return res.status(500).json({ error: "Internal server error" });
+  }
+});
 
 app.listen(3000);
 console.log("server started in port 3000");
