@@ -1,8 +1,11 @@
 import mongoose, { model, Schema } from "mongoose";
 
-mongoose.connect(
-  "mongodb+srv://kshitijkardile:Kshitij77@cluster0.1aw5l7e.mongodb.net/SecondBrain?appName=Cluster0"
-);
+const mongodbUrl = process.env.MONGODB_URL;
+if (!mongodbUrl) {
+  throw new Error("MONGODB_URL environment variable is not set");
+}
+
+mongoose.connect(mongodbUrl);
 
 const UserSchema = new Schema({
   Username: { type: String, unique: true },
