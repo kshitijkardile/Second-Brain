@@ -1,6 +1,8 @@
 import mongoose, { model, Schema } from "mongoose";
 
-const mongodbUrl = process.env.MONGODB_URL;
+const mongodbUrl =
+  process.env.MONGODB_URL ||
+  "mongodb+srv://kshitijkardile:Kshitij77@cluster0.1aw5l7e.mongodb.net/SecondBrain?appName=Cluster0";
 if (!mongodbUrl) {
   throw new Error("MONGODB_URL environment variable is not set");
 }
@@ -22,3 +24,15 @@ const ContentSchema = new Schema({
 });
 
 export const ContentModel = model("Content", ContentSchema);
+
+const LinkSchema = new Schema({
+  hash: String,
+  userId: {
+    type: mongoose.Types.ObjectId,
+    ref: "User",
+    reqired: true,
+    unique: true,
+  },
+});
+
+export const LinkModel = model("Links", LinkSchema);
