@@ -148,34 +148,32 @@ app.delete("/api/v1/content", userMiddleware, async (req, res) => {
 });
 
 app.post("/api/v1/brain/share", userMiddleware, async (req, res) => {
-  const share = req.body.share;
-  if (share) {
-    const existingLink = await LinkModel.findOne({
-      userId: req.userId,
-    });
-
-    if (existingLink) {
-      return res.json({
-        hash: existingLink.hash,
-      });
+  try {
+    const { share } = req.body ?? {};
+    if (share !== true && share !== false) {
+      return res
+        .status(400)
+        .json({ error: "Missing or invalid 'share' boolean in body" });
     }
-    const hash = random(10);
-    await LinkModel.create({
-      userId: req.userId,
-      hash: hash,
-    });
 
-    return res.json({
-      hash,
-    });
-  } else {
-    await LinkModel.deleteOne({
-      userId: req.userId,
-    });
-
-    return res.json({
-      message: "Removed link",
-    });
+    if (share) {
+      const existingLink = await LinkModel.findOne({ userId: req.userId });
+      if (existingLink) {
+        console.log("existing link found:", existingLink.hash);
+        return res.json({ hash: existingLink.hash });
+      }
+      const hash = random(10);
+      const created = await LinkModel.create({ userId: req.userId, hash });
+      console.log("created link:", created);
+      return res.json({ hash });
+    } else {
+      const deleted = await LinkModel.deleteOne({ userId: req.userId });
+      console.log("deleted result:", deleted);
+      return res.json({ message: "Removed link" });
+    }
+  } catch (err) {
+    console.error("share endpoint error:", err);
+    return res.status(500).json({ error: "Internal server error" });
   }
 });
 
